@@ -219,4 +219,5 @@ __marimo__/
 
 # Ignore dataset test, train and valid images
 dataset/
+dataset_weapon_people/
 dataset/data.yaml

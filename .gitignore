@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Ignore dataset test, train and valid images
+dataset/
+dataset/data.yaml

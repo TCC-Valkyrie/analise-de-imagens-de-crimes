@@ -1,0 +1,161 @@
+- name: Instalar Python, Java e rodar projeto
+  hosts: all
+  become: yes
+  vars:
+    app_dir: /opt/tratamento
+    aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
+    aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
+    aws_region: "{{ AWS_DEFAULT_REGION | default('us-east-1') }}"
+    aws_session_token: "{{ AWS_SESSION_TOKEN }}"
+    aws_dir: "/home/ubuntu/.aws"
+
+  tasks:
+    - name: Parar o processo Main.py se estiver rodando
+      shell: |
+        pkill -f "{{ app_dir }}/Main.py" || true
+      ignore_errors: yes
+
+    - name: Atualizar cache do apt
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Instalar dependências básicas
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3.12-venv
+          - openjdk-17-jdk
+          - git
+        state: present
+
+    - name: Criar diretório do app
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Clonar ou atualizar repositório
+      git:
+        repo: "https://github.com/TCC-Valkyrie/analise-de-imagens-de-crimes.git"
+        dest: "{{ app_dir }}"
+        version: "{{ github_ref | default('main') }}"
+        force: yes
+
+    - name: Criar virtualenv para PySpark
+      command: python3 -m venv {{ app_dir }}/venv
+      args:
+        creates: "{{ app_dir }}/venv/bin/activate"
+
+    - name: Desinstalar pacotes listados no requirements.txt
+      command: "{{ app_dir }}/venv/bin/pip uninstall -y -r {{ app_dir }}/requirements.txt"
+      when: ansible_virtualenv is defined
+
+    - name: Instalar dependências no virtualenv
+      pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ app_dir }}/venv"
+        state: present        
+
+    # - name: Apagar arquivo .env se existir
+    #   ansible.builtin.file:
+    #     path: "{{ app_dir }}/.env"
+    #     state: absent
+    #   ignore_errors: yes
+    
+    # - name: Criar arquivo .env
+    #   ansible.builtin.lineinfile:
+    #     path: "{{ app_dir }}/.env"
+    #     line: "BUCKET_NAME_RAW=bkt-wattson-raw-285143259382"
+    #     create: yes
+    #     state: present
+
+    # - name: Adicionar variáveis ao .env
+    #   ansible.builtin.lineinfile:
+    #     path: "{{ app_dir }}/.env"
+    #     insertafter: EOF
+    #     line: "{{ item }}"
+    #   loop:
+    #     - "BUCKET_NAME_TRUSTED=bkt-wattson-trusted-285143259382"
+    #     - "BUCKET_NAME_CLIENT=bkt-wattson-client-285143259382"
+    #     - "DEV_MODE=0"
+
+    - name: Criar diretório ~/.aws
+      file:
+        path: "{{ aws_dir }}"
+        state: directory
+        mode: '0700'
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Criar arquivo de credenciais AWS
+      copy:
+        dest: "{{ aws_dir }}/credentials"
+        mode: '0600'
+        owner: ubuntu
+        group: ubuntu
+        content: |
+          [default]
+          aws_access_key_id = {{ aws_access_key | trim }}
+          aws_secret_access_key = {{ aws_secret_key | trim }}
+          aws_session_token = {{ aws_session_token | trim }}
+     
+    - name: Mostrar o conteúdo do arquivo de credenciais AWS
+      command: cat /home/ubuntu/.aws/credentials
+      register: credentials_content
+      ignore_errors: yes
+
+    - name: Criar diretório ~/.aws para root
+      file:
+        path: "/root/.aws"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Criar arquivo de credenciais AWS no root
+      copy:
+        dest: "/root/.aws/credentials"
+        mode: '0600'
+        owner: root
+        group: root
+        content: |
+          [default]
+          aws_access_key_id = {{ aws_access_key | trim }}
+          aws_secret_access_key = {{ aws_secret_key | trim }}
+          aws_session_token = {{ aws_session_token | trim }}
+
+    - name: Mostrar o conteúdo do arquivo de credenciais AWS root
+      command: cat /root/.aws/credentials
+      register: credentials_content
+      ignore_errors: yes
+          
+
+    - name: Exibir conteúdo do arquivo de credenciais
+      debug:
+        var: credentials_content.stdout
+
+
+        
+    # - name: Executar Main.py dentro do virtualenv como ubuntu
+    #   become_user: ubuntu
+    #   shell: |
+    #     nohup {{ app_dir }}/venv/bin/python {{ app_dir }}/Main.py > /dev/null 2>&1 &
+    #   environment:
+    #     AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    #     AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+    #     AWS_SESSION_TOKEN: "{{ aws_session_token }}"
+    #     AWS_DEFAULT_REGION: "{{ aws_region }}"
+    #     GOOGLE_APPLICATION_CREDENTIALS: "{{ gcp_credentials_file }}"
+    #     BASEDOSDADOS_BILLING_PROJECT_ID: "{{ gcp_project_id }}"
+
+
+    # - name: Executar Main.py dentro do virtualenv
+    #   shell: |
+    #     nohup {{ app_dir }}/venv/bin/python {{ app_dir }}/Main.py > {{ app_dir }}/main.log 2>&1 &
+    #   environment:
+    #     AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    #     AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+    #     AWS_SESSION_TOKEN: "{{  aws_session_token  }}"
+    #     AWS_DEFAULT_REGION: "{{ aws_region }}"

@@ -42,6 +42,14 @@
         dest: "{{ app_dir }}"
         version: "{{ github_ref | default('main') }}"
         force: yes
+    - name: Verificar se o virtualenv existe
+      stat:
+        path: "{{ app_dir }}/venv/bin/activate"
+      register: venv_stat
+
+    - name: Criar virtualenv
+      command: python3 -m venv {{ app_dir }}/venv
+      when: not venv_stat.stat.exists
 
     - name: Criar virtualenv para PySpark
       command: python3 -m venv {{ app_dir }}/venv

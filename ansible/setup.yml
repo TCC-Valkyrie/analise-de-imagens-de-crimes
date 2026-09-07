@@ -42,6 +42,14 @@
         dest: "{{ app_dir }}"
         version: "{{ github_ref | default('main') }}"
         force: yes
+    - name: Verificar se o virtualenv existe
+      stat:
+        path: "{{ app_dir }}/venv/bin/activate"
+      register: venv_stat
+
+    - name: Criar virtualenv
+      command: python3 -m venv {{ app_dir }}/venv
+      when: not venv_stat.stat.exists
 
     - name: Criar virtualenv para PySpark
       command: python3 -m venv {{ app_dir }}/venv
@@ -137,18 +145,17 @@
         var: credentials_content.stdout
 
 
-        
-    # - name: Executar Main.py dentro do virtualenv como ubuntu
-    #   become_user: ubuntu
-    #   shell: |
-    #     nohup {{ app_dir }}/venv/bin/python {{ app_dir }}/Main.py > /dev/null 2>&1 &
-    #   environment:
-    #     AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-    #     AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
-    #     AWS_SESSION_TOKEN: "{{ aws_session_token }}"
-    #     AWS_DEFAULT_REGION: "{{ aws_region }}"
-    #     GOOGLE_APPLICATION_CREDENTIALS: "{{ gcp_credentials_file }}"
-    #     BASEDOSDADOS_BILLING_PROJECT_ID: "{{ gcp_project_id }}"
+    - name: Executar Main.py dentro do virtualenv como ubuntu
+      become_user: ubuntu
+      shell: |
+        nohup {{ app_dir }}/venv/bin/python {{ app_dir }}/app.py > /dev/null 2>&1 &
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SESSION_TOKEN: "{{ aws_session_token }}"
+        AWS_DEFAULT_REGION: "{{ aws_region }}"
+        GOOGLE_APPLICATION_CREDENTIALS: "{{ gcp_credentials_file }}"
+        BASEDOSDADOS_BILLING_PROJECT_ID: "{{ gcp_project_id }}"
 
 
     # - name: Executar Main.py dentro do virtualenv

@@ -107,4 +107,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\gabri\Desktop\analise-de-imagens-de-crimes\runs\detect\crime-model-epochs-15-ReLU,RAdam\training_RAdam_15_epochs-ReLU
+save_dir: C:\Users\gabri\Desktop\analise-de-imagens-de-crimes\runs\detect\crime-model-epochs-15-ReLU-RAdam-teste\training_RAdam_15_epochs-ReLU-teste

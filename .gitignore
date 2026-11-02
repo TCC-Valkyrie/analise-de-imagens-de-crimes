@@ -221,3 +221,9 @@ __marimo__/
 dataset/
 dataset_weapon_people/
 dataset/data.yaml
+
+# Ignore retrain model faces
+retreino_modelo_faces/dataset_faces
+
+# Ignore own use of test images
+teste_imagens
